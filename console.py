@@ -2,6 +2,7 @@
 """ Console Module """
 import cmd
 import os
+import re
 import sys
 from models.base_model import BaseModel
 from models.__init__ import storage
@@ -114,39 +115,53 @@ class HBNBCommand(cmd.Cmd):
         """ Overrides the emptyline method of CMD """
         pass
 
-    def do_create(self, arg):
-    # split the argument by spaces
-        args = arg.split()
-        # check if the first argument is a valid class name
-        if args[0] in HBNBCommand.classes:
-            # create an instance of the class
-            instance = HBNBCommand.classes[args[0]]()
+    def do_create(self, args):
+        """ Create an object of any class"""
+        ignored_attrs = ('id', 'created_at', 'updated_at', '__class__')
+        class_name = ''
+        name_pattern = r'(?P<name>(?:[a-zA-Z]|_)(?:[a-zA-Z]|\d|_)*)'
+        class_match = re.match(name_pattern, args)
+        obj_kwargs = {}
+        if class_match is not None:
+            class_name = class_match.group('name')
+            params_str = args[len(class_name):].strip()
+            params = params_str.split(' ')
+            str_pattern = r'(?P<t_str>"([^"]|\")*")'
+            float_pattern = r'(?P<t_float>[-+]?\d+\.\d+)'
+            int_pattern = r'(?P<t_int>[-+]?\d+)'
+            param_pattern = '{}=({}|{}|{})'.format(
+                name_pattern,
+                str_pattern,
+                float_pattern,
+                int_pattern
+            )
+            for param in params:
+                param_match = re.fullmatch(param_pattern, param)
+                if param_match is not None:
+                    key_name = param_match.group('name')
+                    str_v = param_match.group('t_str')
+                    float_v = param_match.group('t_float')
+                    int_v = param_match.group('t_int')
+                    if float_v is not None:
+                        obj_kwargs[key_name] = float(float_v)
+                    if int_v is not None:
+                        obj_kwargs[key_name] = int(int_v)
+                    if str_v is not None:
+                        obj_kwargs[key_name] = str_v[1:-1].replace('_', ' ')
         else:
-            # print an error message and return
+            class_name = args
+        if not class_name:
+            print("** class name missing **")
+            return
+        elif class_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
-        # loop through the remaining arguments
-        try:
-            for param in args[1:]:
-                # split the parameter by equal sign
-                key, value = param.split("=")
-                # check the value type and format
-                if value.startswith("\""): # string
-                    # replace underscores with spaces and remove double quotes
-                    value = value.replace("_", " ").strip("\"")
-                elif "." in value: # float
-                    # convert to float
-                    value = float(value)
-                else: # integer
-                    # convert to integer
-                    value = int(value)
-                # assign the value to the attribute of the instance
-                setattr(instance, key, value)
-                storage.save()
-            # print the id of the instance
-            print(instance.id)
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        new_instance = HBNBCommand.classes[class_name]()
+        for key, value in obj_kwargs.items():
+            if key not in ignored_attrs:
+                setattr(new_instance, key, value)
+        new_instance.save()
+        print(new_instance.id)
 
     def help_create(self):
         """ Help information for the create method """
@@ -222,27 +237,20 @@ class HBNBCommand(cmd.Cmd):
     def do_all(self, args):
         """ Shows all objects, or all objects of a class"""
         print_list = []
-
+        print(args)
         if args:
             args = args.split(' ')[0]  # remove possible trailing args
             if args not in HBNBCommand.classes:
                 print("** class doesn't exist **")
                 return
-            if os.getenv("HBNB_TYPE_STORAGE", "file") == "db":
-                print_list.append(storage.all)
-            else:
-                for k, v in storage._FileStorage__objects.items():
-                    if k.split('.')[0] == args:
-                        print_list.append(str(v))
-        else:
-            if os.getenv("HBNB_TYPE_STORAGE", "file") == "db":
-                print_list.append(storage.all)
-            else:
-                for k, v in storage._FileStorage__objects.items():
+            for k, v in storage.all(HBNBCommand.classes[args]).items():
+                if k.split('.')[0] == args:
                     print_list.append(str(v))
+        else:
+            for k, v in storage.all().items():
+                print_list.append(str(v))
 
         print(print_list)
-    
 
     def help_all(self):
         """ Help information for the all command """
