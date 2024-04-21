@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 Displays an html page which is running on http://172.29.243.70:5000
-if only it is an integer 
+if only it is an integer
 """
 
 from flask import Flask, render_template
