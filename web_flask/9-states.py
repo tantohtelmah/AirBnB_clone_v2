@@ -3,6 +3,7 @@ from models import storage
 
 app = Flask(__name__)
 
+
 @app.route('/states', strict_slashes=False)
 def states():
     # Get all State objects from storage (sorted by name)
@@ -10,6 +11,7 @@ def states():
 
     # Render the HTML template
     return render_template('states.html', states=states)
+
 
 @app.route('/states/<id>', strict_slashes=False)
 def state_cities(id):
@@ -22,6 +24,7 @@ def state_cities(id):
         return render_template('state_cities.html', state=state, cities=cities)
     else:
         return "<h1>Not found!</h1>"
+
 
 @app.teardown_appcontext
 def teardown_appcontext(exception):
