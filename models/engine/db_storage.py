@@ -4,6 +4,7 @@ Data Base Storage Engine(DBStorage)
 """
 
 
+from math import e
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from models.base_model import Base, BaseModel
@@ -15,6 +16,7 @@ from models.state import State
 from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
+
 
 class DBStorage:
     __engine = None
@@ -28,8 +30,9 @@ class DBStorage:
         password = os.getenv("HBNB_MYSQL_PWD")
         host = os.getenv("HBNB_MYSQL_HOST")
         db_name = os.getenv("HBNB_MYSQL_DB")
-        self.__engine = create_engine(f"mysql+mysqldb://{user}:{password}@{host}/{db_name}",
-                                      pool_pre_ping=True)
+        self.__engine = create_engine(
+            f"mysql+mysqldb://{user}:{password}@{host}/{db_name}",
+            pool_pre_ping=True)
         if os.getenv("HBNB_ENV") == "test":
             Base.metadata.drop_all(self.__engine)
         Base.metadata.create_all(self.__engine)
@@ -51,15 +54,15 @@ class DBStorage:
                     key = f"{class_type.__name__}.{obj.id}"
                     result[key] = obj
         return result
-    
+
     def new(self, obj):
-       self.__session.add(obj)
-       
+        self.__session.add(obj)
+
     def save(self):
         try:
             self.__session.commit()
             print("Changes commited successfully")
-        except:
+        except Exception as e:
             print(f"Error committing: {e}")
             self.__session.rollback
             raise
@@ -75,7 +78,6 @@ class DBStorage:
         Base.metadata.create_all(self.__engine)
         self.__session = scoped_session(sessionmaker(bind=self.__engine,
                                                      expire_on_commit=False))
-
 
     def close(self):
         """
